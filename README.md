@@ -10,6 +10,10 @@ This repository is intended to assist with the development of milkOS by providin
 ## Download & Install
 Use the command below to initiate the download and installation process of the milkOS Development Environment
 
+### via wget: 
+```/bin/sh -c "$(wget -O- https://raw.githubusercontent.com/milkosmain/milkOS--DevEnv-Installer/main/milkOS--DevEnv-DownloadInstall.sh)"```
+
+### via curl:
 ```/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/milkosmain/milkOS--DevEnv-Installer/main/milkOS--DevEnv-DownloadInstall.sh)"```
 
 ----------------------------------------------------------------
