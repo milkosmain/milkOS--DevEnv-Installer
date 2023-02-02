@@ -7,7 +7,7 @@ PACKAGE_LIST=""
 
 echo -en "Welcome to the milkOS Development Environment Installer Download Script\n"
 
-
+echo -en "\n\n"
 echo -en " ________________________________\n"
 echo -en "< Have you milked your OS today? >\n"
 echo -en " --------------------------------\n"
