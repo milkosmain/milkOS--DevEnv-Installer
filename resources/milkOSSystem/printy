@@ -1,0 +1,173 @@
+#!/bin/sh
+
+function printy_banner() {
+  # printy @banner [width@[1 - 100%] | align@[left | right | center] | title="Your Title Here" | subtitle="Your subtitle here" | subtext="Some subtext here"]
+  local inputWidth=""
+  local inputAlign=""
+  local inputTitle=""
+  local inputSubTitle=""
+  local inputSubText=""
+
+  local inputArguments=$( ${@...} )
+
+
+  for i in $inputArguments; do
+    echo "printy_banner() >> Input Argument: ${i}"
+  done
+
+
+
+  # remove @banner from the input arguments
+  
+  local printyBanner_horizontalBorderCharacter=""
+  local printyBanner_verticalBorderCharacter=""
+  local printyBanner_cornerBorderCharacters="" # TL,TR,BL,BR
+  local printyBanner_title=""
+  local printyBanner_bannerWidth=""
+
+  local terminalWidth=$(stty size | cut -d ' ' -f2)
+
+  # for inputArgument in "$inputArguments"; do
+  #   local inputArgumentType=""
+  #   local inputArgumentValue=""
+  #   if [ $(echo "$inputArgument" | grep -o "\@") ]; then
+  #     inputArgumentType="simple"
+  #   elif [ $(echo "$inputArgument" | grep -o "=") ]; then
+  #     inputArgumentType="detail"
+  #   else
+  #     echo "printy >> printy_banner >> Input argument: [ ${inputArgument} ] is not a valid argument, expected argument to have assignment type of @ or =" >&2
+  #     exit 1
+  #   fi
+
+  #   if [ $inputArgumentType = "simple" ]; then
+  #     inputArgumentValue=$(echo "$inputArgument" | cut -d '@' -f2 | tr ' ' '')
+  #   elif [ $inputArgumentType = "detail" ]; then
+  #     inputArgumentValue=$(echo "$inputArgument" | cut -d '=' -f2)
+  #   fi
+
+
+
+  #   echo "inputArgument: $inputArgument, inputArgumentType: $inputArgumentType"
+  #   echo "inputArgumentValue: $inputArgumentValue"
+
+  # done
+
+}
+
+function printy_stylizeText() {
+  local initEscapeCode="\e["
+  local layer=$(echo "$1" | cut -d '@' -f1)
+  local layerCode=""
+  local style=$(echo "$1" | cut -d '@' -f2)
+  local styleCode=""
+  local rgbCode=""
+  local isStyleRGB=0
+
+  case "$layer" in
+    bg) layerCode="48;" ;;
+    fg) layerCode="38;" ;;
+  esac
+
+  case "$style" in
+    black) styleCode="0;0;0" isStyleRGB=1;;
+    white) styleCode="255;255;255" isStyleRGB=1;;
+    red) styleCode="255;0;0" isStyleRGB=1;;
+    green) styleCode="0;255;0" isStyleRGB=1;;
+    blue) styleCode="0;0;255" isStyleRGB=1;;
+    cyan) styleCode="0;255;255" isStyleRGB=1;;
+    magenta) styleCode="255;0;255" isStyleRGB=1;;
+    yellow) styleCode="255;255;0" isStyleRGB=1;;
+    orange) styleCode="255;165;0" isStyleRGB=1;;
+    orangered) styleCode="255;69;0" isStyleRGB=1;;
+    mint) styleCode="61;200;150" isStyleRGB=1;;
+
+  esac
+
+  case "$style" in
+    bold) styleCode="1" ;;
+    italic) styleCode="3" ;;
+    under | underline) styleCode="4" ;;
+    cross | crossout) styleCode="9" ;;
+    strikethrough ) styleCode="6" ;;
+    reverse ) styleCode="7" ;;
+  esac
+
+
+  if [ $isStyleRGB = 1 ]; then
+    rgbCode="2;"
+  fi
+
+  echo -en "${initEscapeCode}${layerCode}${rgbCode}${styleCode}m"
+}
+
+
+
+function printy() {
+  local printyStyle1=""
+  local printyStyle2=""
+  local printyMessage=""
+  local resetCode="\e[0m"
+  local newline=""
+
+  if [ -z "$1" ]; then
+    printf "There was no colorize statement or message provided to milkOSDevEnv_tools/printy >> printy()\n"
+    return 1
+  fi
+
+  if [ "$1" = "reset" ]; then
+    printf "\e[0m"
+    return 0
+  fi
+
+  arg1_isStylizeStatement=$(echo "$1" | grep -E "^(bg|fg)@")
+  if [ ! -z "$arg1_isStylizeStatement" ]; then
+    if  [[ $(echo "$1" | grep -o -E "(\~|\,|\.|\+)") ]]; then
+      local layer=$(echo "$1" | cut -d '@' -f1)
+      for colorOnConstructor in $(echo "$1" | cut -d '@' -f2 | sed -e 's/[~,.+]/\ /g'); do
+        printyStyle1="${printyStyle1}$(printy_stylizeText "${layer}@${colorOnConstructor}")"
+      done
+    else
+      printyStyle1=$(printy_stylizeText "$1")
+    fi
+  elif [ "$1" = "@banner" ]; then
+    printy_banner "$@"
+  elif [ -n "$1" ]; then
+    printyMessage="${printyMessage}${1}"
+  fi
+
+  arg2_isStylizeStatement=$(echo "$2" | grep -E "^(bg|fg)@")
+  if [ ! -z "$arg2_isStylizeStatement" ]; then  
+    if  [[ $(echo "$2" | grep -o -E "(\~|\,|\.|\+)") ]]; then
+      local layer=$(echo "$2" | cut -d '@' -f1)
+      for colorOnConstructor in $(echo "$2" | cut -d '@' -f2 | sed -e 's/[~,.+]/\ /g'); do
+        printyStyle2="${printyStyle2}$(printy_stylizeText "${layer}@${colorOnConstructor}")"
+      done
+    else
+      printyStyle2=$(printy_stylizeText "$2")
+    fi
+  elif [ "$2" = "@continue" ]; then
+    resetCode=""
+  elif [ "$2" = "@reset" ]; then
+    resetCode="\e[0m"
+  elif [ -n "$2" ]; then
+    printyMessage="${printyMessage}${2}"
+  fi
+
+  if [ "$3" = "@continue" ]; then
+    resetCode=""
+  elif [ "$3" = "@reset" ]; then
+    resetCode="\e[0m"
+  elif [ -n "$3" ]; then
+    printyMessage="${printyMessage}${3}"
+  fi
+
+  
+
+  if [[ $(echo "$printyMessage" | grep -o -E "\\\n") ]]; then
+    printyMessage=$(echo "$printyMessage" | sed 's/\\n//')
+    newline="\n"
+  fi
+
+  echo -en "${printyStyle1}${printyStyle2}${printyMessage}${resetCode}${newline}"
+
+}

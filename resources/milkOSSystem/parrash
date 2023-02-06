@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# parrash
+# parrash hooks into busybox's shell (ash), in order to force the use of "$@" to correctly parse arguments into new variables.
+
+# attach to ash
+
+env -i ash
+. ./parrash
+
+# when using "$@", default to parrash
+
+local parameters=
+
+if echo "$@" | grep "@parameters"; then
+  local parrash_hooksIntoExistingShells_value="$@"
+  # is this agent input (typically "function agent () { ... }")?
+  if echo "$parrash_hooksIntoExistingShells_value" | grep "(" ; then
+    echo "$parrash_hooksIntoExistingShells_value" | sed 's/"$@"/\$@/g'
+    source=1
+  fi
+else
+  echo "$( echo "$A" | sed 's/"$@"/\$@/g' )
