@@ -1,0 +1,323 @@
+#!/bin/sh
+
+DECHO() {
+  echo -en "$@" >&2
+  echo -en "\n" >&2
+}
+
+function printy_banner() {
+  # printy @banner width=[1-100%] titleAlign=[left|center|right] bannerAlign=[left|center|right] title="whatever you like" subTitle="another one" subText="If there is any more to say"
+  local inputWidth=""
+  local inputBannerAlign=""
+  local inputTitle=""
+  local inputSubTitle=""
+  local inputTitleAlign=""
+  local inputMessage=""
+  local inputMessageAlign=""
+  
+  local printyBanner_horizontalBorderCharacter="─"
+  local printyBanner_verticalBorderCharacter="│"
+  local printyBanner_cornerBorderTopLeftCharacter="╭"
+  local printyBanner_cornerBorderTopRightCharacter="╮"
+  local printyBanner_cornerBorderBottomLeftCharacter="╰"
+  local printyBanner_cornerBorderBottomRightCharacter="╯"
+
+  local printyBanner_bannerWidth=""
+
+  local terminalWidth=$(stty size | cut -d ' ' -f2)
+  local terminalWidthDividedPercentage=$(echo "$terminalWidth / 100" | bc -l)
+
+  local inputArgumentLoopCount=$(( 0 ))
+  for indexedInputArgument in "$@"; do
+    if [[ ${inputArgumentLoopCount} -ge 1 ]]; then
+      local inputArgumentVariable=$(echo "$indexedInputArgument" | cut -d '=' -f1)
+      local inputArgumentValue=$(echo "$indexedInputArgument" | cut -d '=' -f2)
+
+      DECHO "var: ${inputArgumentVariable}"
+
+      case "${inputArgumentVariable}" in
+        width) inputWidth=$(echo -n ${inputArgumentValue} | sed -e "s/%//g") ;;
+        titleAlign) inputTitleAlign="${inputArgumentValue}" ;;
+        bannerAlign) inputBannerAlign="${inputArgumentValue}" ;;
+        title) inputTitle="${inputArgumentValue}" ;;
+        subTitle) inputSubTitle="${inputArgumentValue}" ;;
+        message) inputMessage="${inputArgumentValue}" ;;
+      esac  
+    fi 
+    inputArgumentLoopCount=$(( ${inputArgumentLoopCount} + 1 ))
+  done
+
+  if [[ -z "${inputWidth}" ]]; then
+    printyBanner_bannerWidth=$(( ${terminalWidth} )) 
+  elif [ -n ${inputWidth} ]; then
+    printyBanner_bannerWidth=$( printf %1.f $(echo "scale=2; $inputWidth * $terminalWidthDividedPercentage" | bc -l ) )
+  fi
+
+
+  if [[ -z "${inputBannerAlign}" ]]; then
+    inputBannerAlign="center"
+  fi
+
+  if [[ -z "${inputTitleAlign}" ]]; then
+    inputTitleAlign="center"
+  fi
+
+  if [[ -z "${inputMessageAlign}" ]]; then
+    inputMessageAlign="center"
+  fi
+
+
+  local printyBanner_bannerAlign_offsetLeft=""
+  local printyBanner_bannerAlign_offsetRight=""
+  if [ "$inputBannerAlign" = "left" ] ; then
+    printyBanner_bannerAlign_offsetLeft=""
+    printyBanner_bannerAlign_offsetRight="$(printf "%${terminalWidth}s")"
+  elif [ "$inputBannerAlign" = "center" ] ; then
+    printyBanner_bannerAlign_offsetLeft="$(printf "%$((( ${terminalWidth} - ${printyBanner_bannerWidth} ) / 2 ))s")"
+    printyBanner_bannerAlign_offsetRight="$(printf "%$((( ${terminalWidth} - ${printyBanner_bannerWidth} ) / 2 ))s")"
+  elif [ "$inputBannerAlign" = "right" ] ; then
+    printyBanner_bannerAlign_offsetLeft="$(printf "%${terminalWidth}s")"
+    printyBanner_bannerAlign_offsetRight=""
+  else
+    echo "printy >> printy_banner >> ValueError: Incorrect value for bannerAlign. Valid arguments are [left | center | right]."
+    exit 0
+  fi
+
+  local printyBanner_titleAlign_offsetLeft=""
+  local printyBanner_titleAlign_offsetRight=""
+  if [ "$inputTitleAlign" = "left" ] ; then
+    printyBanner_titleAlign_offsetLeft=""
+    printyBanner_titleAlign_offsetRight="$(printf "%${printyBanner_bannerWidth}s")"
+  elif [ "$inputTitleAlign" = "center" ] ; then
+    printyBanner_titleAlign_offsetLeft="$(printf "%$(((${printyBanner_bannerWidth} - ${#inputTitle}) / 2 ))s")"
+    printyBanner_titleAlign_offsetRight="$(printf "%$(((${printyBanner_bannerWidth} - ${#inputTitle}) / 2 ))s")"
+  elif [ "$inputTitleAlign" = "right" ] ; then
+    printyBanner_titleAlign_offsetLeft="$(printf "%${printyBanner_bannerWidth}s")"
+    printyBanner_titleAlign_offsetRight=""
+  else
+    echo "printy >> printy_banner >> ValueError: Incorrect value for titleAlign. Valid arguments are [left | center | right]."
+    exit 0
+  fi
+
+  # echo -en "$inputMessage\n"
+  # local inputMessageWidth=$(()
+  # echo "inputMessageWidth: $inputMessageWidth"
+  # local printyBanner_messageAlign_offsetLeft=""
+  # local printyBanner_messageAlign_offsetRight=""
+  # if [ "$inputMessageAlign" = "left" ] ; then
+  #   printyBanner_messageAlign_offsetLeft=""
+  #   printyBanner_messageAlign_offsetRight="$(printf "%${printyBanner_bannerWidth}s")"
+  # elif [ "$inputMessageAlign" = "center" ] ; then
+  #   printyBanner_messageAlign_offsetLeft="$(printf "%$(((${printyBanner_bannerWidth} - ${inputMessageWidth}) / 2 ))s")"
+  #   printyBanner_messageAlign_offsetRight="$(printf "%$(((${printyBanner_bannerWidth} - ${inputMessageWidth}) / 2 ))s")"
+  # elif [ "$inputMessageAlign" = "right" ] ; then
+  #   printyBanner_messageAlign_offsetLeft="$(printf "%${printyBanner_bannerWidth}s")"
+  #   printyBanner_messageAlign_offsetRight=""
+  # else
+  #   echo "printy >> printy_banner >> ValueError: Incorrect value for messageAlign. Valid arguments are [left | center | right]."
+  #   exit 0
+  # fi
+
+
+
+  local printyBanner_topBorderBoundaryBar=""
+  if [ "$inputTitleAlign" = "left" ]; then
+    printyBanner_topBorderBoundaryBar=$(
+      echo -en "${inputTitle}"      
+      for i in $( seq 1 $( ${terminalWidth} - ${#inputTitle} ) ); do echo -en "${printyBanner_horizontalBorderCharacter}"; done
+    )
+  elif [ "$inputTitleAlign" = "center" ]; then
+    local barPortionWidth=$(( ( ${printyBanner_bannerWidth} - ${#inputTitle} - 2 ) / 2 ))
+    printyBanner_topBorderBoundaryBar=$(
+      for i in $( seq 1 ${barPortionWidth} ); do echo -en "${printyBanner_horizontalBorderCharacter}"; done
+      echo -en "${inputTitle}"
+      for i in $( seq 1 ${barPortionWidth} ); do echo -en "${printyBanner_horizontalBorderCharacter}"; done
+    )
+  elif [ "$inputTitleAlign" = "right" ]; then
+    printyBanner_topBorderBoundaryBar=$(
+      echo -en "${inputTitle}"
+    )
+  else
+    echo "printy >> printy_banner >> ValueError: Incorrect value for titleAlign. Valid arguments are [left | center | right]."
+    exit 0
+  fi
+
+
+  local printyBanner_top=$( 
+    echo -en "${printyBanner_offsetLeft}"
+    echo -en "${printyBanner_cornerBorderTopLeftCharacter}"
+    echo -en "${printyBanner_topBorderBoundaryBar}"
+    echo -en "${printyBanner_cornerBorderTopRightCharacter}"
+    echo -en "${printyBanner_offsetRight}"
+  )
+
+  local printyBanner_subTitleRow=$(
+    echo -en "${printyBanner_offsetLeft}"
+    echo -en "${printyBanner_verticalBorderCharacter}"
+    if [ -z ${#inputSubTitle} ]; then
+      for i in $( seq 1 $(( ${printyBanner_bannerWidth} - 2 )) ); do echo -en " "; done
+    else
+      # for i in $( seq 1 $(( ${printyBanner
+    fi
+    echo -en "${printyBanner_verticalBorderCharacter}"
+    echo -en "${printyBanner_offsetRight}"
+  )
+
+  local printyBanner_bodyTitleRow=$(
+
+  )
+
+  echo -en "${printyBanner_top}\n"
+  echo -en "${printyBanner_subTitleRow}\n"
+
+
+
+}
+
+
+function printy_style() {
+  # printy @style [fg | bg]=<style> [[fg | bg]=<style> | /message/] /message/?
+  local input1Layer=""
+  local input1Styles=""
+  local input2Layer=""
+  local input2Styles=""
+
+  local printyStylizedOutput=""
+
+
+  local inputArgumentLoopCount=$(( 0 ))
+  for indexedArgument in "$@"; do
+    if [[ ${inputArgumentLoopCount} -gt 1 ]]; then
+      local inputArgumentVariable=$(echo "$indexedArgument" | cut -d '=' -f1)
+      local inputArgumentValue=$(echo "$indexedArgument" | cut -d '=' -f2)
+
+      if  [[ $(echo "$inputArgumentValue" | grep -o -E "(\~|\,|\.|\+)") ]]; then
+        local cleanValue=$(echo ${inputValue} | sed 's/@//g')
+        input1Layer=${input2Layer}
+        input1Styles=${input2Styles}
+        input2Layer=$cleanValue
+      fi
+    fi
+  done
+
+}
+
+
+function printy_stylizeText() {
+  local initEscapeCode="\e["
+  local layer=$(echo "$1" | cut -d '@' -f1)
+  local layerCode=""
+  local style=$(echo "$1" | cut -d '@' -f2)
+  local styleCode=""
+  local rgbCode=""
+  local isStyleRGB=0
+
+  case "$layer" in
+    bg) layerCode="48;" ;;
+    fg) layerCode="38;" ;;
+  esac
+
+  case "$style" in
+    black) styleCode="0;0;0" isStyleRGB=1;;
+    white) styleCode="255;255;255" isStyleRGB=1;;
+    red) styleCode="255;0;0" isStyleRGB=1;;
+    green) styleCode="0;255;0" isStyleRGB=1;;
+    blue) styleCode="0;0;255" isStyleRGB=1;;
+    cyan) styleCode="0;255;255" isStyleRGB=1;;
+    magenta) styleCode="255;0;255" isStyleRGB=1;;
+    yellow) styleCode="255;255;0" isStyleRGB=1;;
+    orange) styleCode="255;165;0" isStyleRGB=1;;
+    orangered) styleCode="255;69;0" isStyleRGB=1;;
+    mint) styleCode="61;200;150" isStyleRGB=1;;
+
+  esac
+
+  case "$style" in
+    bold) styleCode="1" ;;
+    italic) styleCode="3" ;;
+    under | underline) styleCode="4" ;;
+    cross | crossout) styleCode="9" ;;
+    strikethrough ) styleCode="6" ;;
+    reverse ) styleCode="7" ;;
+  esac
+
+
+  if [ $isStyleRGB = 1 ]; then
+    rgbCode="2;"
+  fi
+
+  echo -en "${initEscapeCode}${layerCode}${rgbCode}${styleCode}m"
+}
+
+
+
+function printy() {
+  local printyStyle1=""
+  local printyStyle2=""
+  local printyMessage=""
+  local resetCode="\e[0m"
+  local newline=""
+
+  if [ -z "$1" ]; then
+    printf "There was no colorize statement or message provided to milkOSDevEnv_tools/printy >> printy()\n"
+    return 1
+  fi
+
+  if [ "$1" = "reset" ]; then
+    printf "\e[0m"
+    return 0
+  fi
+
+  arg1_isStylizeStatement=$(echo "$1" | grep -E "^(bg|fg)@")
+  if [ ! -z "$arg1_isStylizeStatement" ]; then
+    if  [[ $(echo "$1" | grep -o -E "(\~|\,|\.|\+)") ]]; then
+      local layer=$(echo "$1" | cut -d '@' -f1)
+      for colorOnConstructor in $(echo "$1" | cut -d '@' -f2 | sed -e 's/[~,.+]/\ /g'); do
+        printyStyle1="${printyStyle1}$(printy_stylizeText "${layer}@${colorOnConstructor}")"
+      done
+    else
+      printyStyle1=$(printy_stylizeText "$1")
+    fi
+  elif [ "$1" = "@banner" ]; then
+    printy_banner "$@"
+    return 0
+  elif [ -n "$1" ]; then
+    printyMessage="${printyMessage}${1}"
+  fi
+
+  arg2_isStylizeStatement=$(echo "$2" | grep -E "^(bg|fg)@")
+  if [ ! -z "$arg2_isStylizeStatement" ]; then  
+    if  [[ $(echo "$2" | grep -o -E "(\~|\,|\.|\+)") ]]; then
+      local layer=$(echo "$2" | cut -d '@' -f1)
+      for colorOnConstructor in $(echo "$2" | cut -d '@' -f2 | sed -e 's/[~,.+]/\ /g'); do
+        printyStyle2="${printyStyle2}$(printy_stylizeText "${layer}@${colorOnConstructor}")"
+      done
+    else
+      printyStyle2=$(printy_stylizeText "$2")
+    fi
+  elif [ "$2" = "@continue" ]; then
+    resetCode=""
+  elif [ "$2" = "@reset" ]; then
+    resetCode="\e[0m"
+  elif [ -n "$2" ]; then
+    printyMessage="${printyMessage}${2}"
+  fi
+
+  if [ "$3" = "@continue" ]; then
+    resetCode=""
+  elif [ "$3" = "@reset" ]; then
+    resetCode="\e[0m"
+  elif [ -n "$3" ]; then
+    printyMessage="${printyMessage}${3}"
+  fi
+
+  
+
+  if [[ $(echo "$printyMessage" | grep -o -E "\\\n") ]]; then
+    printyMessage=$(echo "$printyMessage" | sed 's/\\n//')
+    newline="\n"
+  fi
+
+  echo -en "${printyStyle1}${printyStyle2}${printyMessage}${resetCode}${newline}"
+
+}

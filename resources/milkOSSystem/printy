@@ -1,56 +1,142 @@
-#!/bin/sh
+#!/bin/bash
+
 
 function printy_banner() {
-  # printy @banner [width@[1 - 100%] | align@[left | right | center] | title="Your Title Here" | subtitle="Your subtitle here" | subtext="Some subtext here"]
-  local inputWidth=""
-  local inputAlign=""
   local inputTitle=""
-  local inputSubTitle=""
-  local inputSubText=""
+  local inputMessage=""
+  local inputMessageSplit=""
 
-  local inputArguments=$( ${@...} )
+  local terminalWidth=$(stty size | awk '{ print $2 }')
 
+  for indexedInputArgument in "${@}"; do
 
-  for i in $inputArguments; do
-    echo "printy_banner() >> Input Argument: ${i}"
+    local parsedKey=""
+    local parsedValue=""
+
+    parsedKey=$(echo $indexedInputArgument | cut -d "=" -f1)
+    parsedValue=$(echo $indexedInputArgument | cut -d "=" -f2)
+
+    if [ "$parsedKey" = "title" ]; then
+      inputTitle=$parsedValue
+    fi
+    
+    if [ "$parsedKey" = "message" ]; then
+      inputMessage=$parsedValue
+    fi
+    
+  done
+
+  if [ -z "$inputTitle" ]; then
+    echo -en "printy >> printy_banner >> no title provided. Exiting.\n"
+    exit 1 
+  fi
+
+  if [ -z "${#inputMessage}" ]; then
+    $inputMessage=""
+  fi
+
+  echo -en "${inputMessageSplit}\n"
+
+  for inputMessageSplitLine in "$inputMessageSplit"; do
+    echo -en "$inputMessageSplitLine\n"
   done
 
 
-
-  # remove @banner from the input arguments
-  
-  local printyBanner_horizontalBorderCharacter=""
-  local printyBanner_verticalBorderCharacter=""
-  local printyBanner_cornerBorderCharacters="" # TL,TR,BL,BR
-  local printyBanner_title=""
-  local printyBanner_bannerWidth=""
-
-  local terminalWidth=$(stty size | cut -d ' ' -f2)
-
-  # for inputArgument in "$inputArguments"; do
-  #   local inputArgumentType=""
-  #   local inputArgumentValue=""
-  #   if [ $(echo "$inputArgument" | grep -o "\@") ]; then
-  #     inputArgumentType="simple"
-  #   elif [ $(echo "$inputArgument" | grep -o "=") ]; then
-  #     inputArgumentType="detail"
-  #   else
-  #     echo "printy >> printy_banner >> Input argument: [ ${inputArgument} ] is not a valid argument, expected argument to have assignment type of @ or =" >&2
-  #     exit 1
-  #   fi
-
-  #   if [ $inputArgumentType = "simple" ]; then
-  #     inputArgumentValue=$(echo "$inputArgument" | cut -d '@' -f2 | tr ' ' '')
-  #   elif [ $inputArgumentType = "detail" ]; then
-  #     inputArgumentValue=$(echo "$inputArgument" | cut -d '=' -f2)
-  #   fi
+  local printyBanner_horizontalBorderCharacter="─"
+  local printyBanner_verticalBorderCharacter="│"
+  local printyBanner_cornerBorderTopLeftCharacter="╭"
+  local printyBanner_cornerBorderTopRightCharacter="╮"
+  local printyBanner_cornerBorderBottomLeftCharacter="╰"
+  local printyBanner_cornerBorderBottomRightCharacter="╯"
 
 
+  local printyBanner_top=$(
+    echo -en "$printyBanner_cornerBorderTopLeftCharacter"
+    for i in $(seq 1 $(( $terminalWidth - 2 )) );
+      do echo -en "$printyBanner_horizontalBorderCharacter"
+    done
+    echo -en "$printyBanner_cornerBorderTopRightCharacter"
+  )
 
-  #   echo "inputArgument: $inputArgument, inputArgumentType: $inputArgumentType"
-  #   echo "inputArgumentValue: $inputArgumentValue"
+  local printyBanner_title=$(
+    echo -en "$printyBanner_verticalBorderCharacter"
+    
+    for i in $(seq 1 $(( $(( $(( ${terminalWidth} - ${#inputTitle} )) - 2 )) / 2 )) );
+      do echo -en " "
+    done
 
-  # done
+    echo -en "$inputTitle"
+
+    for i in $(seq 1 $(( $(( $(( ${terminalWidth} - ${#inputTitle} )) )) / 2 )) );
+      do echo -en " "
+    done
+
+    echo -en "$printyBanner_verticalBorderCharacter"
+
+  )
+
+  local printyBanner_padBottomOfTop=$(
+    echo -en "$printyBanner_verticalBorderCharacter"
+    
+    for i in $(seq 1 $(( $(( $(( ${terminalWidth} )) - 2 )) / 2 )) );
+      do echo -en " "
+    done 
+
+    # echo -en "$inputTitle"
+
+    for i in $(seq 1 $(( $(( $(( ${terminalWidth} )) )) / 2 )) );
+      do echo -en " "
+    done 
+
+    echo -en "$printyBanner_verticalBorderCharacter"
+  )
+
+  function printyBanner_bodyRows() {
+    bodyRowSplitMessage=$(echo "$1" | fold -w $(( $terminalWidth - 22 )) -s)
+    bodyRowSplitMessageLineCount=$(( $( echo -en "$bodyRowSplitMessage" | sed '/^$/d' | wc -l | xargs ) + 1 ))
+
+    # loop through seq of line counts
+    # print char-sets in line # loop
+    for bodyRowSplitMessageLineNum in $(seq 1 $bodyRowSplitMessageLineCount); do
+      local bodyRowSplitMessageLine=$(echo "$bodyRowSplitMessage" | sed '/^$/d' | sed -n "${bodyRowSplitMessageLineNum}p")
+      local bodyRowSplitMessageLineRemainingWidth=$(( $terminalWidth - 2 - ${#bodyRowSplitMessageLine} ))
+      echo -en "$printyBanner_verticalBorderCharacter"
+
+      echo -en "$bodyRowSplitMessageLine"
+
+      for i in $(seq 1 $bodyRowSplitMessageLineRemainingWidth); do
+        echo -en " "
+      done
+
+      echo -en "$printyBanner_verticalBorderCharacter\n"
+
+      # empty lines print spaces ;(
+      if [ -z "${newLineBodyContentSplitMessageLine+x}" ]; then
+        newLineBodyContentSplitMessageLine=" "
+      fi
+    
+    done
+  }
+
+  local printyBanner_bottom=$(
+    echo -en "$printyBanner_cornerBorderBottomLeftCharacter"
+    for i in $(seq 1 $(( $terminalWidth - 2 )) ); do
+      echo -en "$printyBanner_horizontalBorderCharacter"
+    done
+    echo -en "$printyBanner_cornerBorderBottomRightCharacter"
+  )
+
+
+  local printyBanner=$(
+    echo -en "$printyBanner_top\n"
+    echo -en "$printyBanner_title\n"
+    echo -en "$printyBanner_padBottomOfTop\n"
+    echo -en "$(printyBanner_bodyRows "$inputMessage")"
+    echo -en "$printyBanner_bottom\n"
+
+  )
+
+  echo -en "$printyBanner\n"
 
 }
 
@@ -131,6 +217,7 @@ function printy() {
     fi
   elif [ "$1" = "@banner" ]; then
     printy_banner "$@"
+    return 0
   elif [ -n "$1" ]; then
     printyMessage="${printyMessage}${1}"
   fi

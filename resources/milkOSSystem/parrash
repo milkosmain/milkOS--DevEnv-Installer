@@ -8,16 +8,10 @@
 env -i ash
 . ./parrash
 
-# when using "$@", default to parrash
 
-local parameters=
+local parameters=""
 
-if echo "$@" | grep "@parameters"; then
-  local parrash_hooksIntoExistingShells_value="$@"
-  # is this agent input (typically "function agent () { ... }")?
-  if echo "$parrash_hooksIntoExistingShells_value" | grep "(" ; then
-    echo "$parrash_hooksIntoExistingShells_value" | sed 's/"$@"/\$@/g'
-    source=1
-  fi
-else
-  echo "$( echo "$A" | sed 's/"$@"/\$@/g' )
+# when "$@" is called from any ash shell process, override the default output
+
+
+
