@@ -1,10 +1,11 @@
 #!/bin/bash
 
 
-function printy_banner() {
+function printy__banner() {
   local inputTitle=""
   local inputMessage=""
   local inputMessageSplit=""
+  local inputInformation=""
 
   local terminalWidth=$(stty size | awk '{ print $2 }')
 
@@ -22,6 +23,10 @@ function printy_banner() {
     
     if [ "$parsedKey" = "message" ]; then
       inputMessage=$parsedValue
+    fi
+
+    if [ "$parsedKey" = "information" ]; then
+      inputInformation=$parsedValue
     fi
     
   done
@@ -67,7 +72,7 @@ function printy_banner() {
 
     echo -en "$inputTitle"
 
-    for i in $(seq 1 $(( $(( $(( ${terminalWidth} - ${#inputTitle} )) )) / 2 )) );
+    for i in $(seq 1 $(( $(( $(( ${terminalWidth} - ${#inputTitle} )) - 1 )) / 2 )) );
       do echo -en " "
     done
 
@@ -82,9 +87,8 @@ function printy_banner() {
       do echo -en " "
     done 
 
-    # echo -en "$inputTitle"
 
-    for i in $(seq 1 $(( $(( $(( ${terminalWidth} )) )) / 2 )) );
+    for i in $(seq 1 $(( $(( $(( ${terminalWidth} )) - 1 )) / 2 )) );
       do echo -en " "
     done 
 
@@ -92,23 +96,25 @@ function printy_banner() {
   )
 
   function printyBanner_bodyRows() {
-    bodyRowSplitMessage=$(echo "$1" | fold -w $(( $terminalWidth - 22 )) -s)
-    bodyRowSplitMessageLineCount=$(( $( echo -en "$bodyRowSplitMessage" | sed '/^$/d' | wc -l | xargs ) + 1 ))
+    local bodyRows=""
+    local bodyRowSplitMessage=$(echo "$1" | fold -w $(( $terminalWidth - 22 )) -s)
+    local bodyRowSplitMessageLineCount=$(( $( echo -en "$bodyRowSplitMessage" | sed '/^$/d' | wc -l | xargs ) + 1 ))
 
+    # echo -en "$bodyRowSplitMessage\n" >&2
     # loop through seq of line counts
     # print char-sets in line # loop
     for bodyRowSplitMessageLineNum in $(seq 1 $bodyRowSplitMessageLineCount); do
       local bodyRowSplitMessageLine=$(echo "$bodyRowSplitMessage" | sed '/^$/d' | sed -n "${bodyRowSplitMessageLineNum}p")
       local bodyRowSplitMessageLineRemainingWidth=$(( $terminalWidth - 2 - ${#bodyRowSplitMessageLine} ))
-      echo -en "$printyBanner_verticalBorderCharacter"
+      bodyRows=$(echo -en "$bodyRows$printyBanner_verticalBorderCharacter")
 
-      echo -en "$bodyRowSplitMessageLine"
+      bodyRows=$(echo -en "$bodyRows$bodyRowSplitMessageLine")
 
       for i in $(seq 1 $bodyRowSplitMessageLineRemainingWidth); do
-        echo -en " "
+        bodyRows=$(echo -en "$bodyRows ")
       done
 
-      echo -en "$printyBanner_verticalBorderCharacter\n"
+      bodyRows=$(echo -en "$bodyRows$printyBanner_verticalBorderCharacter\n")
 
       # empty lines print spaces ;(
       if [ -z "${newLineBodyContentSplitMessageLine+x}" ]; then
@@ -116,6 +122,8 @@ function printy_banner() {
       fi
     
     done
+
+    echo -en "$bodyRows"
   }
 
   local printyBanner_bottom=$(
@@ -128,10 +136,17 @@ function printy_banner() {
 
 
   local printyBanner=$(
+    echo -en "\e[2K\e[2K\e[2K\r"
     echo -en "$printyBanner_top\n"
     echo -en "$printyBanner_title\n"
     echo -en "$printyBanner_padBottomOfTop\n"
-    echo -en "$(printyBanner_bodyRows "$inputMessage")"
+    echo -en  "$(printyBanner_bodyRows "$inputMessage")"
+
+    if [ ! -z "$inputInformation" ]; then
+      ## split on ::
+      local bodyInformationSplit=$(echo "$inputInformation" | sed 's/::/\n/g' )
+      echo "$(printyBanner_bodyRows "$bodyInformationSplit")"
+    fi
     echo -en "$printyBanner_bottom\n"
 
   )
@@ -140,7 +155,7 @@ function printy_banner() {
 
 }
 
-function printy_stylizeText() {
+function printy__style_determineCode() {
   local initEscapeCode="\e["
   local layer=$(echo "$1" | cut -d '@' -f1)
   local layerCode=""
@@ -157,15 +172,22 @@ function printy_stylizeText() {
   case "$style" in
     black) styleCode="0;0;0" isStyleRGB=1;;
     white) styleCode="255;255;255" isStyleRGB=1;;
+    gray) styleCode="60;60;60" isStyleRGB=1;;
     red) styleCode="255;0;0" isStyleRGB=1;;
+    flatred) styleCode="200;70;10" isStyleRGB=1;;
     green) styleCode="0;255;0" isStyleRGB=1;;
+    flatgreen) styleCode="0;90;55" isStyleRGB=1;;
     blue) styleCode="0;0;255" isStyleRGB=1;;
+    flatblue) styleCode="0;90;225" isStyleRGB=1;;
     cyan) styleCode="0;255;255" isStyleRGB=1;;
     magenta) styleCode="255;0;255" isStyleRGB=1;;
     yellow) styleCode="255;255;0" isStyleRGB=1;;
+    flatyellow) styleCode="200;200;70" isStyleRGB=1;;
     orange) styleCode="255;165;0" isStyleRGB=1;;
     orangered) styleCode="255;69;0" isStyleRGB=1;;
     mint) styleCode="61;200;150" isStyleRGB=1;;
+    gold) styleCode="255;204;14" isStyleRGB=1;;
+    purple) styleCode="150;52;206" isStyleRGB=1;;
 
   esac
 
@@ -186,6 +208,37 @@ function printy_stylizeText() {
   echo -en "${initEscapeCode}${layerCode}${rgbCode}${styleCode}m"
 }
 
+function printy__style() {
+  local printyStyleCodeStack=""
+  local resetCode="\e[0m"
+  local outputMessage=""
+
+  local inputArgumentCountLoop=0
+  for inputArgument in "$@"; do
+    if [ $inputArgument = "@style" ]; then
+      continue
+    fi
+    local isStylizeStatement=$(echo "$inputArgument" | grep -E "^(bg|fg)@")
+    if [ "$isStylizeStatement" ]; then
+      local argumentStyleCode=$(printy__style_determineCode "$inputArgument")
+      printyStyleCodeStack="$printyStyleCodeStack$argumentStyleCode"
+    fi
+    if [ -z "$isStylizeStatement" ]; then
+
+      if [ $inputArgument = "@continue" ]; then
+        resetCode=""
+      else
+        outputMessage="$inputArgument"
+      fi
+    fi
+
+  done
+  
+
+
+  echo -en "${printyStyleCodeStack}${outputMessage}${resetCode}"
+
+}
 
 
 function printy() {
@@ -200,61 +253,19 @@ function printy() {
     return 1
   fi
 
-  if [ "$1" = "reset" ]; then
-    printf "\e[0m"
+
+  if [ "$1" = "@banner" ]; then
+    printy__banner "$@"
     return 0
   fi
 
-  arg1_isStylizeStatement=$(echo "$1" | grep -E "^(bg|fg)@")
-  if [ ! -z "$arg1_isStylizeStatement" ]; then
-    if  [[ $(echo "$1" | grep -o -E "(\~|\,|\.|\+)") ]]; then
-      local layer=$(echo "$1" | cut -d '@' -f1)
-      for colorOnConstructor in $(echo "$1" | cut -d '@' -f2 | sed -e 's/[~,.+]/\ /g'); do
-        printyStyle1="${printyStyle1}$(printy_stylizeText "${layer}@${colorOnConstructor}")"
-      done
-    else
-      printyStyle1=$(printy_stylizeText "$1")
-    fi
-  elif [ "$1" = "@banner" ]; then
-    printy_banner "$@"
+  if [ "$1" = "@style" ]; then
+    printy__style "$@"
     return 0
-  elif [ -n "$1" ]; then
-    printyMessage="${printyMessage}${1}"
   fi
 
-  arg2_isStylizeStatement=$(echo "$2" | grep -E "^(bg|fg)@")
-  if [ ! -z "$arg2_isStylizeStatement" ]; then  
-    if  [[ $(echo "$2" | grep -o -E "(\~|\,|\.|\+)") ]]; then
-      local layer=$(echo "$2" | cut -d '@' -f1)
-      for colorOnConstructor in $(echo "$2" | cut -d '@' -f2 | sed -e 's/[~,.+]/\ /g'); do
-        printyStyle2="${printyStyle2}$(printy_stylizeText "${layer}@${colorOnConstructor}")"
-      done
-    else
-      printyStyle2=$(printy_stylizeText "$2")
-    fi
-  elif [ "$2" = "@continue" ]; then
-    resetCode=""
-  elif [ "$2" = "@reset" ]; then
-    resetCode="\e[0m"
-  elif [ -n "$2" ]; then
-    printyMessage="${printyMessage}${2}"
+  if [ "$1" = "@reset" ]; then
+    echo -en "\e[0m"
+    return 0
   fi
-
-  if [ "$3" = "@continue" ]; then
-    resetCode=""
-  elif [ "$3" = "@reset" ]; then
-    resetCode="\e[0m"
-  elif [ -n "$3" ]; then
-    printyMessage="${printyMessage}${3}"
-  fi
-
-  
-
-  if [[ $(echo "$printyMessage" | grep -o -E "\\\n") ]]; then
-    printyMessage=$(echo "$printyMessage" | sed 's/\\n//')
-    newline="\n"
-  fi
-
-  echo -en "${printyStyle1}${printyStyle2}${printyMessage}${resetCode}${newline}"
-
 }

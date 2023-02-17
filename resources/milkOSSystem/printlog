@@ -1,0 +1,19 @@
+#!/bin/sh
+
+function printlog() {
+    local inputLine=""
+    local silent=0
+
+    if [ "$1" = "-s" ]; then
+        silent=1
+    fi
+
+    read -r inputLine
+
+    # echo "$inputLine" >> printlog.log
+
+    if [[ ! -z "$inputLine" ]]; then
+      echo -en "$inputLine\n" >&1
+    fi
+    
+}

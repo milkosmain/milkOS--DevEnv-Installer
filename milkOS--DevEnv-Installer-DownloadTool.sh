@@ -6,9 +6,31 @@ CLEANUP=0
 
 MILKOS_DOWNLOAD_HOST_URL_ROOT="https://raw.githubusercontent.com/milkosmain/milkOS--DevEnv-Installer/main/"
 THIS_SCRIPT_FILENAME="milkOS--DevEnv-Installer-DownloadTool.sh"
-MILKOS_DOWNLOAD_STORAGE_PATH="./.milkOS--DevEnv-Installer.d/"
+RESOURCE_FS_SCAFFOLD="\
+resources/;\
+resources/milkOSDevEnvInstaller/;\
+resources/milkOSDevEnvInstaller/tools/;\
+resources/milkOSDevEnvInstaller/controllers/;\
+resources/milkOSSystem/"
+RESOURCE_PACKAGE_LIST="\
+resources/vars; \
+resources/milkOSSystem/printlog;\
+resources/milkOSSystem/printy;\
+resources/milkOSDevEnvInstaller/controllers/controller__fsCreateDelete;\
+resources/milkOSDevEnvInstaller/tools/devenvinstaller__printlog;\
+"
+
+MILKOSDEVENV_DOWNLOAD_STORAGE_PATH="./.milkOS--DevEnv-Installer.d/"
 PACKAGE_LIST=""
 
+
+function spaced() {
+  # function to echo spaces to make output "prettier"
+  local amount=$1
+  local spacedStack=""
+  spacedStack=$(printf "%${amount}s")
+  echo "$spacedStack"
+}
 
 function milkOSDevEnvInstallerDownloadTool__header() {
   milkOSDevEnvInstallerDownloadTool__header__terminal_width=$(stty size | awk '{print $2}')
@@ -45,13 +67,13 @@ function milkOSDevEnvInstallerDownloadTool__header() {
 }
 
 function milkOSDevEnvInstallerDownloadTool__createDownloadStorageDir() {
-  echo -en "Creating download storage...\n\n"
-  if [ -d "$MILKOS_DOWNLOAD_STORAGE_PATH" ]; then
+  echo -en "Creating download storage...\n"
+  if [ -d "$MILKOSDEVENV_DOWNLOAD_STORAGE_PATH" ]; then
     echo -en "Download storage already exists!\n"
     echo -en "Skipping creation.\n"
   else
-    mkdir "$MILKOS_DOWNLOAD_STORAGE_PATH"
-    if [ ! -d "$MILKOS_DOWNLOAD_STORAGE_PATH" ]; then
+    mkdir "$MILKOSDEVENV_DOWNLOAD_STORAGE_PATH"
+    if [ ! -d "$MILKOSDEVENV_DOWNLOAD_STORAGE_PATH" ]; then
       echo -en "Unable to create download storage!\n"
       echo -en "Try running this script as root.\n"
       exit 1
@@ -63,25 +85,67 @@ function milkOSDevEnvInstallerDownloadTool__createDownloadStorageDir() {
 
 }
 
+function milkOSDevEnvInstallerDownloadTool__createDownloadStorageResourceScaffold() {
+  echo -en "⛏ Creating directories\n"
+  IFS=";"
+  for resourceDir in $RESOURCE_FS_SCAFFOLD; do
+    echo -en "\e[38;2;61;150;225m\e[1m"
+    echo -en $(spaced 4)
+    echo -en "${resourceDir}\n"
+    echo -en "\e[0m"
+    echo -en "\e[38;2;200;70;10m"
+    echo -en $(spaced 6)
+    mkdir "${MILKOSDEVENV_DOWNLOAD_STORAGE_PATH}${resourceDir}"
+
+    if [ "$?" = "0" ] && [ -d "${MILKOSDEVENV_DOWNLOAD_STORAGE_PATH}${resourceDir}" ]; then
+      echo -en "\e[0m"
+      echo -en "\e[38;2;61;200;150m"
+      echo -en "\e[2K\e[1A"
+      echo -en "\n"
+      echo -en $(spaced 6)
+      echo -en "✓ Created directory\n"
+      echo -en "\e[0m"
+    elif [ "$?" != "0" ]; then
+      if [ -d "${MILKOSDEVENV_DOWNLOAD_STORAGE_PATH}${resourceDir}" ]; then
+        echo -en "\e[0m"
+        echo -en "\e[38;2;200;200;13m"
+        echo -en "\e[2K\e[1A"
+        echo -en "\n"
+        echo -en $(spaced 6)
+        echo -en "Warning: tried to create directory, but it already exists.\n"
+        echo -en "\e[0m"
+      else
+        echo -en "\e[0m"
+        echo -en "\e[38;2;200;13;100m"
+        echo -en "\e[2K\e[1A"
+        echo -en "\n"
+        echo -en $(spaced 6)
+        echo -en "Error, Failed to create the directory. Skipping Directory: ${resourceDir}.\n"
+        echo -en "\e[0m"
+      fi
+    fi
+  done
+}
+
 function milkOSDevEnvInstallerDownloadTool__downloadResource() {
   local resourceName="$1"
   echo -en "Downloading '${resourceName}'...\n\n"
   echo -en "From: ${MILKOS_DOWNLOAD_HOST_URL_ROOT}/milkosmain/milkOS--DevEnv-Installer/${resourceName}\n\n"
   
-  echo -en "${MILKOS_DOWNLOAD_STORAGE_PATH}${resourceName}\n\n"
+  echo -en "${MILKOSDEVENV_DOWNLOAD_STORAGE_PATH}${resourceName}\n\n"
   
-  downloadResult=$(wget -q "${MILKOS_DOWNLOAD_HOST_URL_ROOT}/milkosmain/milkOS--DevEnv-Installer/main/${resourceName}" -P "${MILKOS_DOWNLOAD_STORAGE_PATH}" -O "${MILKOS_DOWNLOAD_STORAGE_PATH}${resourceName}" )
+  downloadResult=$(wget -q "${MILKOS_DOWNLOAD_HOST_URL_ROOT}/milkosmain/milkOS--DevEnv-Installer/main/${resourceName}" -P "${MILKOSDEVENV_DOWNLOAD_STORAGE_PATH}" -O "${MILKOSDEVENV_DOWNLOAD_STORAGE_PATH}${resourceName}" )
 
   echo -en "${downloadResult}"
 
-  MILKOS_DOWNLOAD_STORAGE_CONTENTS=$(ls "./${MILKOS_DOWNLOAD_STORAGE_PATH}")
+  MILKOS_DOWNLOAD_STORAGE_CONTENTS=$(ls "./${MILKOSDEVENV_DOWNLOAD_STORAGE_PATH}")
 
   echo -en "${MILKOS_DOWNLOAD_STORAGE_CONTENTS}\n"
 
-  echo -en "\n${MILKOS_DOWNLOAD_STORAGE_PATH}${resourceName}\n"
+  echo -en "\n${MILKOSDEVENV_DOWNLOAD_STORAGE_PATH}${resourceName}\n"
 
 
-  if [ ! -f "${MILKOS_DOWNLOAD_STORAGE_PATH}${resourceName}" ]; then
+  if [ ! -f "${MILKOSDEVENV_DOWNLOAD_STORAGE_PATH}${resourceName}" ]; then
     echo -en "Unable to download resource ${resourceName}!\n"
     echo -en "Exiting.\n"
     exit 1
@@ -104,7 +168,7 @@ function milkOSDevEnvInstallerDownloadTool__main() {
   fi
 
   echo -en "\e[48;2;51;102;255m"
-  milkOSDevEnvInstallerDownloadTool__header "milkOS--DevEnv-Installer" "" "Download Tool" "" "v0.2.3"
+  milkOSDevEnvInstallerDownloadTool__header "milkOS--DevEnv-Installer" "" "Download Tool" "" "v23.02.11"
   echo -en "\e[0m"
 
   if [[ "$DEBUG" = "1" ]]; then
@@ -118,8 +182,8 @@ function milkOSDevEnvInstallerDownloadTool__main() {
 
   if [[ "$CLEANUP" = "1" ]]; then
     echo -en "Cleaning up...\n"
-    rm -rf "${MILKOS_DOWNLOAD_STORAGE_PATH}"
-    if [ -d "$MILKOS_DOWNLOAD_STORAGE_PATH" ]; then
+    rm -rf "${MILKOSDEVENV_DOWNLOAD_STORAGE_PATH}"
+    if [ -d "$MILKOSDEVENV_DOWNLOAD_STORAGE_PATH" ]; then
       echo -en "Could not clean download storage!\n"
     else
       echo -en "Cleaned download storage!\n"
@@ -133,7 +197,8 @@ function milkOSDevEnvInstallerDownloadTool__main() {
 
   fi
 
-  milkOSDevEnvInstallerDownloadTool__downloadResource "milkOS--DevEnv-Installer.sh"
+  milkOSDevEnvInstallerDownloadTool__createDownloadStorageResourceScaffold
+
 }
 
 milkOSDevEnvInstallerDownloadTool__main $@

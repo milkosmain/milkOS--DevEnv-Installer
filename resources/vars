@@ -1,0 +1,10 @@
+#!/bin/sh
+
+dir__milkOSDevEnv_installer="$(pwd)"
+
+dir__milkOSDevEnv_installer__hidden="$dir__milkOSDevEnv_installer/.milkOSDevEnvInstaller/"
+
+
+dir__milkOSDevEnv_installer_resources="$dir__milkOSDevEnv_installer/resources"
+
+dir__milkOSDevEnv_installer_tmp="$dir__milkOSDevEnv_installer/tmp"
