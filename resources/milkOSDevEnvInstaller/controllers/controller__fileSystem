@@ -1,0 +1,80 @@
+#!/bin/bash
+. resources/milkOSSystem/printy
+
+function controller__fileSystem_create() {
+  local action=""
+  local type=""
+  local target=""
+
+  if [ -z "$1" ]; then
+    printy @style fg@flatred @continue
+    echo "Error: controller__fileSystem >> controller__fileSystem_create >> controller__fileSystem_create(): "
+    printy @reset
+    echo "You must define an action to run on this item while using controller__fileSystem()."
+    exit 1
+  fi
+
+  if [ -z "$2" ]; then
+    printy @style fg@flatred @continue
+    echo "Error: controller__fileSystem >> controller__fileSystem_create >> controller__fileSystem_create(): "
+    printy @reset
+    echo "You must define a type of item to create while using controller__fileSystem()."
+    exit 1
+  fi
+
+  if [ -z "$3" ]; then
+    printy @style fg@flatred @continue
+    echo "Error: controller__fileSystem >> controller__fileSystem_create >> controller__fileSystem_create(): "
+    printy @reset
+    echo "You must define a target for the item you are attempting to create while using controller__fileSystem()."
+    exit 1
+  fi
+
+  action=$1
+  type=$2
+  target=$3
+
+  if [ $action != "create" ]; then 
+    echo "Error: controller__fileSystem >> controller__fileSystem_create >> controller__fileSystem_create(): "
+    echo "You must define an action to actually be create when using controller__fileSystem_create()."
+    exit 1
+  fi
+
+  
+
+  if [ $type = "file" ]; then
+    touch "$target"
+    if 
+
+  elif [ $type = "dir" ] ||  [ $type = "directory" ]; then
+
+  fi
+
+}
+
+function controller__fileSystem() {
+  local action="" # create | delete
+  local type="" # file | dir/directory
+  local target="" # path to target item
+
+  if [ -z "$1" ]; then
+    printy @style fg@flatred @continue
+    echo "Error: controller__fileSystem >> controller__fileSystem(): You must define an action to run on this item while using controller__fileSystem()."
+    printy @reset
+    exit 1
+  fi
+
+  local action=$1
+
+  if [ $action = "create" ]; then 
+    controller__fileSystem_create "$@"
+  elif [ $action = "delete" ]; then
+    controller__fsDelete "$@"
+  elif [ $action = "backup "]; then
+    controller__fileSystemBackup "$@"
+  else
+    printy @style fg@flatred @continue
+    echo "Error: controller__fileSystem >> controller__fileSystem(): "
+    printy @reset
+    echo "$1 invalid action value passed to function argument. You must specifically use \"create\", \"delete\", or \"backup\" while using controller__fileSystem()."
+}

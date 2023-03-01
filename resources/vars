@@ -1,10 +1,22 @@
 #!/bin/sh
 
-dir__milkOSDevEnv_installer="$(pwd)"
+folderPath__milkOSDevEnv_installer="$(pwd)"
 
-dir__milkOSDevEnv_installer__hidden="$dir__milkOSDevEnv_installer/.milkOSDevEnvInstaller/"
+folderPath__milkOSDevEnv_installer__hidden="$folderPath__milkOSDevEnv_installer/.milkOSDevEnvInstaller/"
+
+folderPath__milkOSDevEnv_installer_backups="$folderPath__milkOSDevEnv_installer/backups"
+
+folderPath__milkOSDevEnv_installer_resources="$folderPath__milkOSDevEnv_installer/resources"
+
+folderPath__milkOSDevEnv_installer_tmp="$folderPath__milkOSDevEnv_installer/tmp"
 
 
-dir__milkOSDevEnv_installer_resources="$dir__milkOSDevEnv_installer/resources"
+filePath__packageManagerRepositories="/etc/apk/repositories"
 
-dir__milkOSDevEnv_installer_tmp="$dir__milkOSDevEnv_installer/tmp"
+virtualizationEngineNameList="VirtualBox,VMware,Libvirt,unknown"
+
+milkOSDevEnv_virtualization_packages__vmware="open-vm-tools open-vm-tools-guestinfo"
+
+milkOSDevEnv_virtualization_packages__virtualbox="virtualbox-guest-utils"
+
+milkOSDevEnv_virtualization_pacakages__libvirt=""

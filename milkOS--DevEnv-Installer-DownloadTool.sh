@@ -7,6 +7,7 @@ CLEANUP=0
 MILKOS_DOWNLOAD_HOST_URL_ROOT="https://raw.githubusercontent.com/milkosmain/milkOS--DevEnv-Installer/main/"
 THIS_SCRIPT_FILENAME="milkOS--DevEnv-Installer-DownloadTool.sh"
 RESOURCE_FS_SCAFFOLD="\
+backup/;\
 resources/;\
 resources/milkOSDevEnvInstaller/;\
 resources/milkOSDevEnvInstaller/tools/;\

@@ -1,0 +1,49 @@
+#!/bin/sh
+
+function controller__test___testItems() {
+  local action="" # enable | disable
+  local actionIcon="" # [✓] | [✗]
+
+  if [ -z "$1" ]; then
+    printy @style fg@flatred @continue
+    echo "Error: controller__test >> controller__test___testItems >> controller__test___testItems(): "
+    printy @reset
+    echo "You must define `an action` argument while using this method while using controller__test___testItems()."
+    exit 1
+  else
+    action=$1
+    if [ "${action}" != "enable" ] || [ "${action}" != "disable" ]; then
+      printy @style fg@flatred @continue
+      echo "Error: controller__test >> controller__test___testItems >> controller__test___testItems($1): "
+      printy @reset
+      echo "Invalid action argument. Must be 'enable' or 'disable'."
+      exit 1
+    elif [ $action == "enable" ]; then
+      actionIcon=" [✓]"
+    elif [ $action == "disable" ]; then
+      actionIcon=" [✗]"
+    fi
+  fi
+
+  echo "Test Item ::${actionIcon}"
+  echo -en "$(echo $action | sed 's/^./\U&/')"
+  echo "signed by: $1"
+}
+
+
+function controller__test() {
+  echo -en "\n\n"
+  for i in "$@"; do
+    echo "controller__test item ↴"
+    echo $i
+
+    case $i in
+      testItems.enable )
+        controller__test___testItems "enable"
+      ;;
+      testItems.disable )
+        controller__test___testItems "disable"
+    esac
+  done
+
+}

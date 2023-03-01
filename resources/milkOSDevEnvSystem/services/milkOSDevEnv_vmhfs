@@ -1,0 +1,128 @@
+#!/bin/sh
+
+
+milkOS_System_Tool__printy__Path="/usr/bin/printy"
+milkOS_DevEnv_ServiceConf__vmhfs__Path="/etc/conf.d/milkOSDevEnv_vmhfs"
+
+mountPathConfKey="vmhfsMountPath"
+
+# # find milkOSSysTools
+# if [ -f ${milkOS_System_Tool__printy__Path} ]; then
+#   . .${milkOS_System_Tool__printy__Path}
+# else
+#   echo -en "Error: milkOSDevEnv_vmhfs: printy system tool not found (
+#     ${milkOS_System_Tool__printy__Path}
+#   )"
+# fi
+ =       =
+if [ ! -f ${milkOS_DevEnv_ServiceConf__vmhfs__Path} ]; then
+  echo -en "Error: milkOSDevEnv_vmhfs: Conf file missing (${milkOS_DevEnv_ServiceConf__vmhfs__Path})\n"
+  exit 1;
+fi
+
+if !
+
+function getConfContents() {
+  local confContents=$(cat $milkOS_DevEnv_ServiceConf__vmhfs__Path)
+  echo -en "$confContents"
+}
+
+function getKeyValue() {
+  local confContents=""
+  local keyToGet=""
+  local keyValue=""
+
+  if [ ! -z $1 ] && [ ! -z $2 ]; then
+    confContents=$1;
+    keyToGet=$2;
+    keyValue=$((echo $confContents | grep $keyToGet  | cut -d"+" -f2))
+  fi
+}
+
+function setKeyValue() {
+  local currentConfContents=""
+  local keyToSet=""
+  local valueToSet=""
+
+  currentConfContents=$(getConfContents)
+  if [ -z $currentConfContents ]; then
+    echo -en "Couldn't get vmhfs service config.";
+    exit 1;
+  fi
+
+  if [ -z $1 ]; then
+    echo -en "Error: milkOSDevEnv_vmhfs:setKeyValue: No key name or value supplied."
+  elif [ -z $2 ]; then
+    echo -en "Error: milkOSDevEnv_vmhfs:setKeyValue: No value supplied."
+  else
+    keyToSet=$1
+    valueToSet=$2
+
+    echo -en "Setting $key to $value to $conf\""
+    local newConfContents=$(
+      echo $currentConfContents | sed "s|^$keyToSet[^=]*|$keyToSet=$valueToSet|"
+    )
+
+    echo -en "$newConfContents" > $milkOS_DevEnv_ServiceConf__vmhfs__Path
+  fi
+}
+
+function getMountPath() {
+  local currentMountPathValue=""
+  local currentConfContents=""
+
+  if [ -f $currentConfContents ]; then
+    currentMountPathValue=$(echo $currentConfContents | grep "$mountPathConfKey")
+    echo -en "$currentMountPathValue"
+  else
+    echo -en "Error: milkOSDevEnv_vmhfs:getMountPath: vmhfsMountPath not found"
+    exit 1;
+  fi
+}
+
+function setMountPath() {
+  local newMountPathValue=""
+  local currentConfContents=""
+
+
+  if [ -f $milkOS_DevEnv_ServiceConf__vmhfs__Path ]; then
+    currentConfContents=$(cat $milkOS_DevEnv_ServiceConf__vmhfs__Path)
+    currentMountPathValue=$(echo $currentConfContents | grep "$mountPathConfKey" | cut -d"=" -f2)
+  else
+    echo -en "Error: milkOSDevEnv_vmhfs:getMountPath: Conf file missing (${milkOS_DevEnv_ServiceConf__vmhfs__Path})"
+    exit 1;
+  fi
+
+  if [ -z $1 ]; then
+    echo -en "Error: milkOSDevEnv_vmhfs:setMountPath: No mountPath supplied."
+    exit 1;
+  else
+    mountPathValue="$1"
+    #replace the key value for vmhfsMountPath in vmhfs config file with new value
+    newConfContents=$(
+      echo $currentConfContents | sed "s|$mountPathConfKey=$currentMountPathValue|$mountPathConfKey\"$mountPathValue"
+    )
+    echo -en "$newConfContents" > $milkOS_DevEnv_ServiceConf__vmhfs__Path
+  fi
+}
+
+function run() {
+  local currentConfContents=""
+  local currentMountPath=""
+
+  if [ ! -f $milkOS_DevEnv_ServiceConf__vmhfs__Path ]; then
+    echo -en "Error: milkOSDevEnv_vmhfs:run: Conf file missing (${milkOS_DevEnv_ServiceConf__vmhfs__Path})"
+    exit 1;
+  else
+    currentConfContents="$(cat $milkOS_DevEnv_ServiceConf__vmhfs__Path)"
+    currentMountPath="$(getMountPath)"
+  fi
+
+  if [ -z "$currentMountPath" ]; then
+    echo -en "Error: milkOSDevEnv_vmhfs:run: Mount path not found. Run \`/usr/sbin/vmhfs setMountPath \"/Path/To/Folder\"\`"
+    exit 1;
+  fi
+  
+
+}
+

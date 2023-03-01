@@ -1,7 +1,13 @@
 #!/bin/sh
 
+. ./resources/vars
+# . ./resources/milkOSDevEnvInstaller/controllers/controller__packageManagement
+. ./resources/milkOSDevEnvInstaller/controllers/controller__test
+
+
 . ./resources/milkOSDevEnvInstaller/tools/devenvinstaller__printlog
 . ./resources/milkOSSystem/printy
+
 
 
 
@@ -68,12 +74,9 @@ EOF
 
 isCorrectDistro=0
 isVirtualMachine=0
-virtualizationEngineNameList="VirtualBox,VMware,Libvirt,unknown"
 virtualizationEngineName="unknown"
 machineUID=""
-
-
-
+proceedInstallDevEnvSystemPackages=0
 
 
 
@@ -94,7 +97,6 @@ function checkDistro() {
   local style_success="${style_reset}${style_bold}${style_fg_flatGreen}"
   local style_info="${style_italic}${style_fg_flatBlue}"
   if [ ! -f "/etc/os-release" ]; then
-
     statusMessage="${style_error}Error: checkDistro(): Failed to find /etc/os-release file, please ensure you are running ${style_info}${expectedDistro}${style_error}!"
   elif [ -f "/etc/os-release" ]; then
     currentDistro=$(cat "/etc/os-release" | grep "^NAME")
@@ -118,7 +120,7 @@ function checkDistro() {
     echo -en "\e[0m"
   elif [[ -z "$currentDistroMatch" ]]; then
     echo -en "${style_error}$warningIcon"
-    echo -en "$statusMessage"
+    echo -en "\n$statusMessage"
     echo -en "${style_reset}"
     exit 0
   fi
@@ -230,7 +232,7 @@ function prompt_selectVirtualizationEngine() {
   case $input_verify_virtualizationEngine in
     y|Y)  
       input_virtualizationEngineNumber=${input_virtualizationEngineSelection}
-      input_virtualizationEngineName=$(echo -en "$virtualizationEngineNameList" | cut -d',' -f$input_virtualizationEngineNumber)
+      virtualizationEngineName=$(echo -en "$virtualizationEngineNameList" | cut -d',' -f$input_virtualizationEngineNumber)
     ;;
     n|N)
       echo -en "$(ruline 7)"
@@ -256,14 +258,7 @@ function generateMachineUID() {
   machineUIDBody=$(tr -dc 'A-Z0-9' < /dev/urandom | head -c 12)
   machineUIDPostfix="-$(tr -dc 'a-z0-9' < /dev/urandom | head -c 3)"
   echo -en "${machineUIDPrefix}${machineUIDBody}${machineUIDPostfix}"
-  echo -en "\n"
-}
 
-function verify_packageManagerConnectivity() {
-  apkRepoFile="/etc/apk/repositories"
-# find line with main, but no "#"  
-  command="wget --spider $(cat $apkRepoFile | grep "main" | grep -v "#")"
-  $(eval "$command") &>2
 }
 
 function prompt_installDevEnvSystemPackages() {
@@ -293,8 +288,10 @@ function prompt_installDevEnvSystemPackages() {
     ;;
   esac
 
-  echo -en "\tYou have entered"
-  echo -en "$input_installSystemPackages"
+  echo -en "\tYou have entered "
+  printy @style fg@flatyellow @continue
+  echo -en "${input_installSystemPackages}"
+  printy @reset
   echo -en ", is this correct?\n"
   echo -en "\n"
   echo -en "\tEnter option (y/n):"
@@ -302,7 +299,7 @@ function prompt_installDevEnvSystemPackages() {
 
   case $input_verify_installSystemPackages in
     y|Y) 
-      installedDevEnvSystemPackages=1 
+      proceedInstallDevEnvSystemPackages=1 
     ;;
     n|N)
       echo -en "$(ruline 8)"
@@ -315,14 +312,195 @@ function prompt_installDevEnvSystemPackages() {
       return 0
     ;;
   esac
+}
 
+function verify_packageManagerConnectivity() {
+  local packageManagerMainRepository=""
+  local packageManagerCommunityRepository=""
+  local packageManagerRepositoriesFile="/etc/apk/repositories"
+  local generalConnectionStatus=0
+  local packageManagerRepositoryConnectionStatus=0
+
+  printy @style bg@flatgreen fg@white @continue
+  echo -en "Testing connectivity with package repository...\n"
+  printy @reset
+
+  ping -q -c 1 -W 1 1.1.1.1 > /dev/null 2>&1
+  if [[ $? -eq 0 ]]; then
+    printy @style fg@mint @continue
+    echo -en "✓ Internet connection check passed.\n"
+    printy @reset
+    
+    generalConnectionStatus=$((generalConnectionStatus+1))
+  else
+    printy @style fg@flatred @continue
+    echo -en "✗ Internet connection check failed.\n"
+    echo -en "Please check your internet connection.\n"
+    echo -en "Saving current progress and exiting...\n"
+    printy @reset
+    
+    generalConnectionStatus=$((generalConnectionStatus-1))
+  fi
+
+  packageManagerMainRepository=$(cat ${packageManagerRepositoriesFile} | grep -v \# | grep "main")
+  packageManagerCommunityRepository=$(cat ${packageManagerRepositoriesFile} | grep -v \# | grep "community")
+  
+  wget --spider --quiet ${packageManagerMainRepository} 2>/dev/null
+  if [[ $? -eq 0 ]]; then
+    printy @style fg@mint @continue
+    echo -en "✓ Connection to Main Repository passed.\n"
+    echo -en "\t${packageManagerMainRepository}\n"
+    printy @reset
+    
+    packageManagerRepositoryConnectionStatus=$((packageManagerRepositoryConnectionStatus+1))
+  else
+    printy @style fg@flatred @continue
+    echo -en "✗ Connection to Main Repository failed.\n"
+    echo -en "\t${packageManagerMainRepository}\n"
+    echo -en "Please check your internet connection.\n"
+    echo -en "Saving current progress and exiting...\n"
+    printy @reset
+    
+    packageManagerRepositoryConnectionStatus=$((packageManagerRepositoryConnectionStatus-1))
+    # TODO: Create function to save progress and exit gracefully.
+  fi
+
+  wget --spider --quiet ${packageManagerCommunityRepository} 2>/dev/null
+  if [[ $? -eq 0 ]]; then
+    printy @style fg@mint @continue
+    echo -en "✓ Connection to Community Repository passed.\n"
+    echo -en "\t${packageManagerCommunityRepository}\n"
+    printy @reset
+    
+    packageManagerRepositoryConnectionStatus=$((packageManagerRepositoryConnectionStatus+1))
+  else
+    printy @style fg@flatred @continue
+    echo -en "✗ Connection to Community Repository failed.\n"
+    echo -en "\t${packageManagerCommunityRepository}\n"
+    echo -en "Please check your internet connection.\n"
+    echo -en "Saving current progress and exiting...\n"
+    printy @reset
+    
+    packageManagerRepositoryConnectionStatus=$((packageManagerRepositoryConnectionStatus-1))
+  fi
 
 }
 
-function installDevEnvSystemPackages() {
+# function restore_packageManagerRepositories() {
+
+# }
+
+function backup_packageManagerRepositories() {
+  local dateTimeBackupFolderName="$(date +"%Y%m%d_%H%m%S")"
+  
+  echo -en "\n\n"
   printy @style bg@flatgreen fg@white @continue
-  echo -en "Prepping development environment system packages\n"
+  echo -en "Backing up package repositories file: ${filePath__packageManagerRepositories}\n"
   printy @reset
+
+  cp "${filePath__packageManagerRepositories}" "${folderPath__milkOSDevEnv_installer_backups}.backup/${dateTimeBackupFolderName}${filePath__packageManagerRepositories}"
+
+  if [ -f ${folderPath__milkOSDevEnv_installer_backups}/${dateTimeBackupFolderName}${filePath__packageManagerRepositories} ]; then
+    printy @style fg@mint @continue
+    echo -en "✓ Successfully backed up file:\n"
+    echo -en "\t${folderPath__milkOSDevEnv_installer_backups}/${dateTimeBackupFolderName}${filePath__packageManagerRepositories}\n"
+    printy @reset
+  else
+    printy @style fg@flatred @continue
+    echo -en "✗ There was an error backing up file.\n"
+    echo -en "Please check your permissions in '${folderPath__milkOSDevEnv_installer_backups}' and retry.\n"
+    printy @reset
+  fi
+}
+
+function enable_packageManagerRepositories() {
+  local communityEnabled=$(cat /etc/apk/repositories | grep 'community' | grep '\#' | wc -l)
+
+  echo -en "\n\n"
+  printy @style bg@flatgreen fg@white @continue
+  echo -en "Checking if community repository is enabled...\n"
+  printy @reset
+
+  if [[ $communityEnabled = "0" ]]; then
+    printy @style bg@flatgreen fg@white @continue
+    echo -en "Community repository is not enabled in '${filePath__packageManagerRepositories}'! Please follow the prompts below.\n"
+    printy @reset
+
+    echo -en "Would you like to enable the community repository now?\nEnter (y/n):"
+    read -r input_enableCommunityRepository
+
+    local input_verify_enableCommunityRepository="0"
+    case $input_enableCommunityRepository in
+      y|Y)
+        input_verify_enableCommunityRepository="1"
+      ;;
+      n|N)
+        input_verify_enableCommunityRepository="0"
+      ;;
+      *)
+        echo -en "$(ruline 5)"
+        enable_packageManagerRepositories
+        return 0
+      ;;
+    esac
+
+    if [[ $input_verify_enableCommunityRepository = "1" ]]; then
+      local etcApkResponsitoriesContents=$(cat ${filePath__packageManagerRepositories})
+      ## remove '#' from line containing community and '#'
+      etcApkResponsitoriesContents=$(echo "$etcApkResponsitoriesContents" | sed 's/#@community/@community/g')
+      echo -en "${etcApkResponsitoriesContents}" > ${filePath__packageManagerRepositories}
+    fi
+  elif [[ $communityEnabled = "1" ]]; then
+    printy @style fg@mint @continue
+    echo -en "Community repository is enabled in '${filePath__packageManagerRepositories}'.\n"
+    printy @reset
+  fi
+  echo -en "\n"
+}
+
+function run_installDevEnvSystemPackages() {
+  printy @style bg@flatgreen fg@white @continue
+  echo -en "Preparing to install system packages for milkOS Development Environment\n"
+  printy @reset
+
+  echo -en "\n"
+  echo -en "Please confirm virtualization engine;\n"
+  echo -en "$virtualizationEngineName\n"
+  echo -en "Is this correct?\n"
+  echo -en "\n"
+  echo -en "Enter option (Y/n):"
+  read -r input_confirmVirtualizationEngine_priorInstallSystemPackages
+
+  case $input_confirmVirtualizationEngine_priorInstallSystemPackages in
+    y|Y) continue ;;
+    n|N) 
+      prompt_selectVirtualizationEngine
+      continue
+    ;;
+    *)
+      echo -en "\n\n\n"
+      echo -en "You have entered an invalid option! Please try again."
+      echo -en "\n\n\n"
+    ;;
+  esac
+
+  echo -en "${virtualizationEngineName}"
+  echo -en "\n"
+  echo -en "VMware"
+  echo -en "\n"
+
+  if [ "$virtualizationEngineName" = "VMware" ]; then
+    # apk add $(echo -en "${milkOSDevEnv_virtualization_packages__vmware}")
+    # auto run
+    for package in $(echo -en "${milkOSDevEnv_virtualization_packages__vmware}" | tr ' ' ); do
+      apk add $package
+    done
+
+  else
+    #TODO add support for other virtualization engines.
+    echo -en "Sorry, we only support VMware at this time. All other Linux based container engines will be supported in the future.\n"
+  fi
+
 }
 
 function constantBanner() {
@@ -372,19 +550,26 @@ clear
 constantBanner
 checkDistro
 
-prompt_isVirtualMachine
-if [[ $is_virtualMachine = 1 ]]; then
-  prompt_selectVirtualizationEngine
-fi
+# prompt_isVirtualMachine
+# if [[ $is_virtualMachine = 1 ]]; then
+#   prompt_selectVirtualizationEngine
+# fi
 
-clear
-printy @style bg@flatgreen fg@white @continue
-printy @banner title="milkOS Dev Env Installer" information=":: Installing Environment::"
-printy @reset
+# clear
+# printy @style bg@flatgreen fg@white @continue
+# printy @banner title="milkOS Dev Env Installer" information=":: Installing Environment::"
+# printy @reset
 
-prompt_installDevEnvSystemPackages
+# prompt_installDevEnvSystemPackages
 
-verify_packageManagerConnectivity
+# verify_packageManagerConnectivity
+
+controller__test testItems.enable
+controller__test testItems.disable
+
+# enable_packageManagerRepositories
+
+# run_installDevEnvSystemPackages
 
 # generateMachineUID
 

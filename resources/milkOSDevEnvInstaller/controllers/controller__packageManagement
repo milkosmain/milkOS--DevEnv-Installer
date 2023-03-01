@@ -1,0 +1,65 @@
+#!/bin/sh
+
+
+
+folderPath__milkOSDevEnvInstaller___backups=""
+filePath__packageManagerRepositories="/etc/apk/repositories"
+
+
+
+# function controller__packageManagement___restore_communityRepository() {
+
+
+# }
+
+function controller__packageManagement___repositories_backup() {
+  echo -en "${folderPath__milkOSDevEnv_installer}"
+
+}
+
+# function controller__packageManagement___enable_communityRepository() {
+  
+# }
+
+# function controller__packageManagement___removePackage() {
+
+# }
+
+# function controller__packageManagement___getPackage() {
+
+# }
+
+
+function controller__packageManagement() {
+  local action=""
+
+  if [ -z "$1" ]; then
+    printy @style fg@flatred @continue
+    echo "Error: controller__packageManagement >> controller__packageManagement(): "
+    printy @reset
+    echo "You must define an action argument while using this method while using controller__packageManagement()."
+    exit 1
+  fi
+
+  case "$1" in
+    .repositories.backup )
+      controller__packageManagement___repositories_backup "$@"
+    ;;
+    .repositories.community.enable)
+      continue
+    ;;
+    .respositories.restore )
+      continue
+    ;;
+    .
+      continue
+    ;;
+    *)
+      printy @style fg@flatred @continue
+      echo "Error: controller__packageManagement >> controller__packageManagement($1): "
+      printy @reset
+      echo "Could not resolve input action to function due to unknown value when using controller__packageManagement()."
+      exit 1
+    ;;
+  esac
+}
